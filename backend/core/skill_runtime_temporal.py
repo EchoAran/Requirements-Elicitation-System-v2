@@ -20,8 +20,6 @@ class SkillMeta:
     description: str
     location: str
     skill_md_path: str
-    references: list[str]
-    entry_summary: str
 
 
 def _xml_escape(text: str) -> str:
@@ -67,48 +65,6 @@ def _parse_frontmatter(content: str) -> dict[str, str]:
         return {}
 
 
-def _strip_frontmatter(content: str) -> str:
-    if not content.startswith("---"):
-        return content
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        return content
-    return parts[2]
-
-
-def _build_entry_summary(content: str, max_chars: int = 1200) -> str:
-    body = _strip_frontmatter(content).strip()
-    if not body:
-        return ""
-    compact = " ".join(body.split())
-    if len(compact) <= max_chars:
-        return compact
-    return compact[:max_chars]
-
-
-def _scan_references(skill_dir: Path) -> list[str]:
-    ref_dir = skill_dir / "references"
-    if not ref_dir.exists() or not ref_dir.is_dir():
-        ref_dir = skill_dir / "reference"
-    if not ref_dir.exists() or not ref_dir.is_dir():
-        return []
-    refs: list[str] = []
-    for p in sorted(ref_dir.iterdir()):
-        if p.is_file():
-            refs.append(p.name)
-    return refs
-
-
-def _resolve_reference_dir(skill_dir: Path) -> Path | None:
-    references_dir = skill_dir / "references"
-    if references_dir.exists() and references_dir.is_dir():
-        return references_dir
-    reference_dir = skill_dir / "reference"
-    if reference_dir.exists() and reference_dir.is_dir():
-        return reference_dir
-    return None
-
-
 def _scan_skills(skill_roots: list[str]) -> list[SkillMeta]:
     found: dict[str, SkillMeta] = {}
     for root in _normalize_roots(skill_roots):
@@ -132,8 +88,6 @@ def _scan_skills(skill_roots: list[str]) -> list[SkillMeta]:
                 description=description,
                 location=child.resolve().as_posix(),
                 skill_md_path=skill_md.resolve().as_posix(),
-                references=_scan_references(child),
-                entry_summary=_build_entry_summary(content),
             )
     return sorted(found.values(), key=lambda x: x.name)
 
@@ -147,12 +101,10 @@ def _skills_to_xml(skills: list[dict[str, Any]] | list[SkillMeta]) -> str:
             name = s.name
             description = s.description
             location = s.location
-            references = ", ".join(s.references)
         else:
             name = str(s.get("name", "")).strip()
             description = str(s.get("description", "")).strip()
             location = str(s.get("location", "")).strip()
-            references = ", ".join([str(x).strip() for x in (s.get("references") or []) if str(x).strip()])
         rows.append(
             "\n".join(
                 [
@@ -160,50 +112,11 @@ def _skills_to_xml(skills: list[dict[str, Any]] | list[SkillMeta]) -> str:
                     f"    <name>{_xml_escape(name)}</name>",
                     f"    <description>{_xml_escape(description)}</description>",
                     f"    <location>{_xml_escape(location)}</location>",
-                    f"    <references>{_xml_escape(references)}</references>",
                     "  </skill>",
                 ]
             )
         )
     return "<available_skills>\n" + "\n".join(rows) + "\n</available_skills>"
-
-
-def _preferred_summaries_xml(skills: list[dict[str, Any]] | list[SkillMeta], preferred_skills: list[str]) -> str:
-    if not preferred_skills:
-        return "<preferred_skill_summaries></preferred_skill_summaries>"
-    by_name: dict[str, dict[str, Any]] = {}
-    for s in skills:
-        if isinstance(s, SkillMeta):
-            by_name[s.name] = {
-                "name": s.name,
-                "entry_summary": s.entry_summary,
-                "references": s.references,
-            }
-        elif isinstance(s, dict):
-            name = str(s.get("name", "")).strip()
-            if name:
-                by_name[name] = s
-    rows: list[str] = []
-    for skill_name in preferred_skills:
-        s = by_name.get(skill_name)
-        if not isinstance(s, dict):
-            continue
-        summary = str(s.get("entry_summary", "")).strip()
-        references = ", ".join([str(x).strip() for x in (s.get("references") or []) if str(x).strip()])
-        rows.append(
-            "\n".join(
-                [
-                    "  <skill>",
-                    f"    <name>{_xml_escape(skill_name)}</name>",
-                    f"    <summary>{_xml_escape(summary)}</summary>",
-                    f"    <references>{_xml_escape(references)}</references>",
-                    "  </skill>",
-                ]
-            )
-        )
-    if not rows:
-        return "<preferred_skill_summaries></preferred_skill_summaries>"
-    return "<preferred_skill_summaries>\n" + "\n".join(rows) + "\n</preferred_skill_summaries>"
 
 
 def _message_content_to_text(content: object) -> str:
@@ -235,59 +148,6 @@ def _build_skill_tools() -> list[dict]:
                         "skill_name": {"type": "string"}
                     },
                     "required": ["skill_name"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        }
-        ,
-        {
-            "type": "function",
-            "function": {
-                "name": "list_skill_references",
-                "description": "List reference files under reference/ of a declared skill.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "skill_name": {"type": "string"}
-                    },
-                    "required": ["skill_name"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "read_skill_reference",
-                "description": "Read a named reference file under reference/ of a declared skill.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "skill_name": {"type": "string"},
-                        "ref_name": {"type": "string"},
-                    },
-                    "required": ["skill_name", "ref_name"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "read_skill_reference_chunk",
-                "description": "Read a chunk of a named reference file by offset and limit.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "skill_name": {"type": "string"},
-                        "ref_name": {"type": "string"},
-                        "offset": {"type": "integer"},
-                        "limit": {"type": "integer"},
-                    },
-                    "required": ["skill_name", "ref_name", "offset", "limit"],
                     "additionalProperties": False,
                 },
                 "strict": True,
@@ -326,14 +186,11 @@ def _find_skill_root(p: Path, skills: list[SkillMeta]) -> Path | None:
 
 
 SYSTEM_PROMPT_TEMPLATE = """You are a backend skill runtime assistant.
-You can read skill content via read_skill_entry, list_skill_references, read_skill_reference, and read_skill_reference_chunk.
-Use preferred skill summaries first, then read additional files only when needed.
-When a preferred skill is relevant, request multiple tool calls in one response if both workflow and output references are needed.
-Avoid exploratory reads outside preferred skills unless required.
+You can read skill content via read_skill_entry.
+Use preferred skills only and read the skill entry before answering.
 Return only final answer content for the stage task.
 Preferred skills: {preferred_skills}
 {skills_xml}
-{preferred_summaries_xml}
 """
 
 
@@ -345,13 +202,11 @@ class SkillRuntimeTemporalActivities:
         preferred = payload.get("preferred_skills") or []
         preferred_text = ", ".join([str(x) for x in preferred]) if preferred else "none"
         skills_xml = payload.get("skills_xml", "")
-        preferred_summaries_xml = payload.get("preferred_summaries_xml", "")
         stage_instruction = str(payload.get("stage_instruction", "")).strip()
         stage_payload = str(payload.get("stage_payload", "")).strip()
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
             preferred_skills=preferred_text,
             skills_xml=skills_xml,
-            preferred_summaries_xml=preferred_summaries_xml,
         )
         return [
             {"role": "system", "content": system_prompt},
@@ -413,75 +268,6 @@ class SkillRuntimeTemporalActivities:
             if len(content) > max_chars:
                 content = content[:max_chars]
             return {"ok": True, "skill_name": skill_name, "resolved_path": p.as_posix(), "content": content}
-        if tool_name == "list_skill_references":
-            skill_name = str((arguments or {}).get("skill_name", "")).strip()
-            if not skill_name:
-                return {"ok": False, "content": "TOOL_ERROR: missing skill_name"}
-            skill = skills_by_name.get(skill_name)
-            if skill is None:
-                return {"ok": False, "content": f"TOOL_ERROR: FileNotFoundError: Skill not found: {skill_name}"}
-            return {"ok": True, "skill_name": skill_name, "references": list(skill.references)}
-        if tool_name == "read_skill_reference":
-            skill_name = str((arguments or {}).get("skill_name", "")).strip()
-            ref_name = str((arguments or {}).get("ref_name", "")).strip()
-            if not skill_name:
-                return {"ok": False, "content": "TOOL_ERROR: missing skill_name"}
-            if not ref_name:
-                return {"ok": False, "content": "TOOL_ERROR: missing ref_name"}
-            skill = skills_by_name.get(skill_name)
-            if skill is None:
-                return {"ok": False, "content": f"TOOL_ERROR: FileNotFoundError: Skill not found: {skill_name}"}
-            ref_map = {x.lower(): x for x in skill.references}
-            resolved_ref_name = ref_map.get(ref_name.lower())
-            if not resolved_ref_name:
-                return {"ok": False, "content": f"TOOL_ERROR: FileNotFoundError: Reference not found: {ref_name}"}
-            reference_dir = _resolve_reference_dir(Path(skill.location))
-            if reference_dir is None:
-                return {"ok": False, "content": f"TOOL_ERROR: FileNotFoundError: Reference directory not found: {skill_name}"}
-            p = _resolve_path((reference_dir / resolved_ref_name).as_posix())
-            if not p.exists():
-                return {"ok": False, "content": f"TOOL_ERROR: FileNotFoundError: File not found: {p.as_posix()}"}
-            if not _is_allowed(p, roots):
-                return {"ok": False, "content": f"TOOL_ERROR: PermissionError: Access denied: {p.as_posix()}"}
-            content = p.read_text(encoding="utf-8")
-            skill_root = _find_skill_root(p, skills)
-            if skill_root is not None:
-                content = content.replace("{baseDir}", skill_root.as_posix())
-            if len(content) > max_chars:
-                content = content[:max_chars]
-            return {"ok": True, "skill_name": skill_name, "ref_name": ref_name, "resolved_path": p.as_posix(), "content": content}
-        if tool_name == "read_skill_reference_chunk":
-            skill_name = str((arguments or {}).get("skill_name", "")).strip()
-            ref_name = str((arguments or {}).get("ref_name", "")).strip()
-            offset = max(0, int((arguments or {}).get("offset", 0)))
-            limit = max(1, int((arguments or {}).get("limit", 4096)))
-            if not skill_name:
-                return {"ok": False, "content": "TOOL_ERROR: missing skill_name"}
-            if not ref_name:
-                return {"ok": False, "content": "TOOL_ERROR: missing ref_name"}
-            ref_resp = await self.execute_tool_call(
-                {
-                    "tool_name": "read_skill_reference",
-                    "arguments": {"skill_name": skill_name, "ref_name": ref_name},
-                    "skill_roots": skill_roots,
-                    "workspace": workspace,
-                    "max_chars": max_chars,
-                    "skills": skills_raw,
-                }
-            )
-            if not ref_resp.get("ok"):
-                return ref_resp
-            full_content = str(ref_resp.get("content", ""))
-            chunk = full_content[offset : offset + limit]
-            return {
-                "ok": True,
-                "skill_name": skill_name,
-                "ref_name": ref_name,
-                "resolved_path": str(ref_resp.get("resolved_path", "")),
-                "offset": offset,
-                "limit": limit,
-                "content": chunk,
-            }
         return {"ok": False, "content": f"TOOL_ERROR: unsupported tool: {tool_name}"}
 
 
@@ -596,7 +382,6 @@ class SkillRuntimeTemporalWorkflow:
                 "stage_payload": stage_payload,
                 "preferred_skills": preferred_skills,
                 "skills_xml": _skills_to_xml(skills),
-                "preferred_summaries_xml": _preferred_summaries_xml(skills, preferred_skills),
             },
             task_queue=activity_q,
             start_to_close_timeout=timedelta(seconds=max(10, int(CONFIG.TEMPORAL_SKILL_ACTIVITY_TIMEOUT_SECONDS))),

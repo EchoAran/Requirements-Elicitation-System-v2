@@ -14,8 +14,6 @@ class SkillMeta:
     description: str
     location: str
     skill_md_path: str
-    references: list[str]
-    entry_summary: str
 
 
 def _xml_escape(text: str) -> str:
@@ -61,25 +59,6 @@ def _parse_frontmatter(content: str) -> dict:
         return {}
 
 
-def _strip_frontmatter(content: str) -> str:
-    if not content.startswith("---"):
-        return content
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        return content
-    return parts[2]
-
-
-def _build_entry_summary(content: str, max_chars: int = 1200) -> str:
-    body = _strip_frontmatter(content).strip()
-    if not body:
-        return ""
-    compact = " ".join(body.split())
-    if len(compact) <= max_chars:
-        return compact
-    return compact[:max_chars]
-
-
 class SkillCatalog:
     def __init__(self, roots: list[str]):
         self.roots = _normalize_roots(roots)
@@ -109,23 +88,9 @@ class SkillCatalog:
                     description=description,
                     location=child.resolve().as_posix(),
                     skill_md_path=skill_md.resolve().as_posix(),
-                    references=self._scan_references(child),
-                    entry_summary=_build_entry_summary(content),
                 )
         self.skills = sorted(found.values(), key=lambda x: x.name)
         return self.skills
-
-    def _scan_references(self, skill_dir: Path) -> list[str]:
-        ref_dir = skill_dir / "references"
-        if not ref_dir.exists() or not ref_dir.is_dir():
-            ref_dir = skill_dir / "reference"
-        if not ref_dir.exists() or not ref_dir.is_dir():
-            return []
-        refs: list[str] = []
-        for p in sorted(ref_dir.iterdir()):
-            if p.is_file():
-                refs.append(p.name)
-        return refs
 
     def to_xml(self) -> str:
         if not self.skills:
@@ -139,36 +104,11 @@ class SkillCatalog:
                         f"    <name>{_xml_escape(s.name)}</name>",
                         f"    <description>{_xml_escape(s.description)}</description>",
                         f"    <location>{_xml_escape(s.location)}</location>",
-                        f"    <references>{_xml_escape(', '.join(s.references))}</references>",
                         "  </skill>",
                     ]
                 )
             )
         return "<available_skills>\n" + "\n".join(body) + "\n</available_skills>"
-
-    def preferred_summaries_xml(self, preferred_skills: list[str]) -> str:
-        if not preferred_skills:
-            return "<preferred_skill_summaries></preferred_skill_summaries>"
-        by_name = {s.name: s for s in self.skills}
-        rows: list[str] = []
-        for skill_name in preferred_skills:
-            s = by_name.get(skill_name)
-            if s is None:
-                continue
-            rows.append(
-                "\n".join(
-                    [
-                        "  <skill>",
-                        f"    <name>{_xml_escape(s.name)}</name>",
-                        f"    <summary>{_xml_escape(s.entry_summary)}</summary>",
-                        f"    <references>{_xml_escape(', '.join(s.references))}</references>",
-                        "  </skill>",
-                    ]
-                )
-            )
-        if not rows:
-            return "<preferred_skill_summaries></preferred_skill_summaries>"
-        return "<preferred_skill_summaries>\n" + "\n".join(rows) + "\n</preferred_skill_summaries>"
 
 
 class SkillSandbox:
@@ -229,39 +169,6 @@ class SkillSandbox:
         skill = self._skill_by_name(skill_name)
         return self.read_text(skill.skill_md_path)
 
-    def list_skill_references(self, skill_name: str) -> list[str]:
-        skill = self._skill_by_name(skill_name)
-        return list(skill.references)
-
-    def read_skill_reference(self, skill_name: str, ref_name: str) -> tuple[str, str]:
-        skill = self._skill_by_name(skill_name)
-        ref_map = {x.lower(): x for x in skill.references}
-        resolved_ref_name = ref_map.get(ref_name.lower())
-        if not resolved_ref_name:
-            raise FileNotFoundError(f"Reference not found: {ref_name}")
-        reference_dir = self._resolve_reference_dir(Path(skill.location))
-        if reference_dir is None:
-            raise FileNotFoundError(f"Reference directory not found for skill: {skill_name}")
-        p = reference_dir / resolved_ref_name
-        return self.read_text(p.as_posix())
-
-    def read_skill_reference_chunk(self, skill_name: str, ref_name: str, offset: int, limit: int) -> tuple[str, str, int, int]:
-        content, resolved = self.read_skill_reference(skill_name, ref_name)
-        safe_offset = max(0, int(offset))
-        safe_limit = max(1, int(limit))
-        chunk = content[safe_offset : safe_offset + safe_limit]
-        return chunk, resolved, safe_offset, safe_limit
-
-    def _resolve_reference_dir(self, skill_dir: Path) -> Path | None:
-        references_dir = skill_dir / "references"
-        if references_dir.exists() and references_dir.is_dir():
-            return references_dir
-        reference_dir = skill_dir / "reference"
-        if reference_dir.exists() and reference_dir.is_dir():
-            return reference_dir
-        return None
-
-
 def build_skill_tools() -> list[dict]:
     return [
         {
@@ -275,58 +182,6 @@ def build_skill_tools() -> list[dict]:
                         "skill_name": {"type": "string"}
                     },
                     "required": ["skill_name"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "list_skill_references",
-                "description": "List reference files under reference/ of a declared skill.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "skill_name": {"type": "string"}
-                    },
-                    "required": ["skill_name"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "read_skill_reference",
-                "description": "Read a named reference file under reference/ of a declared skill.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "skill_name": {"type": "string"},
-                        "ref_name": {"type": "string"},
-                    },
-                    "required": ["skill_name", "ref_name"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "read_skill_reference_chunk",
-                "description": "Read a chunk of a named reference file by offset and limit.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "skill_name": {"type": "string"},
-                        "ref_name": {"type": "string"},
-                        "offset": {"type": "integer"},
-                        "limit": {"type": "integer"},
-                    },
-                    "required": ["skill_name", "ref_name", "offset", "limit"],
                     "additionalProperties": False,
                 },
                 "strict": True,
@@ -346,17 +201,13 @@ class SkillExecutor:
     async def run(self, stage_instruction: str, payload: str, preferred_skills: list[str] | None = None) -> str | None:
         preferred = preferred_skills or []
         preferred_text = ", ".join(preferred) if preferred else "none"
-        preferred_summary_xml = self.catalog.preferred_summaries_xml(preferred)
         system_prompt = (
             "You are a backend skill runtime assistant.\n"
-            "You can read skill content via read_skill_entry, list_skill_references, read_skill_reference, and read_skill_reference_chunk.\n"
-            "Use preferred skill summaries first, then read additional files only when needed.\n"
-            "When a preferred skill is relevant, request multiple tool calls in one response if both workflow and output references are needed.\n"
-            "Avoid exploratory reads outside preferred skills unless required.\n"
+            "You can read skill content via read_skill_entry.\n"
+            "Use preferred skills only and read the skill entry before answering.\n"
             "Return only final answer content for the stage task.\n"
             f"Preferred skills: {preferred_text}\n"
-            f"{self.catalog.to_xml()}\n"
-            f"{preferred_summary_xml}"
+            f"{self.catalog.to_xml()}"
         )
         messages: list[dict] = [
             {"role": "system", "content": system_prompt},
@@ -425,46 +276,6 @@ class SkillExecutor:
                     return "TOOL_ERROR: missing skill_name"
                 content, resolved = self.sandbox.read_skill_entry(skill_name)
                 return json.dumps({"ok": True, "skill_name": skill_name, "resolved_path": resolved, "content": content}, ensure_ascii=False)
-            if tool_name == "list_skill_references":
-                skill_name = str((args or {}).get("skill_name", "")).strip()
-                if not skill_name:
-                    return "TOOL_ERROR: missing skill_name"
-                references = self.sandbox.list_skill_references(skill_name)
-                return json.dumps({"ok": True, "skill_name": skill_name, "references": references}, ensure_ascii=False)
-            if tool_name == "read_skill_reference":
-                skill_name = str((args or {}).get("skill_name", "")).strip()
-                ref_name = str((args or {}).get("ref_name", "")).strip()
-                if not skill_name:
-                    return "TOOL_ERROR: missing skill_name"
-                if not ref_name:
-                    return "TOOL_ERROR: missing ref_name"
-                content, resolved = self.sandbox.read_skill_reference(skill_name, ref_name)
-                return json.dumps(
-                    {"ok": True, "skill_name": skill_name, "ref_name": ref_name, "resolved_path": resolved, "content": content},
-                    ensure_ascii=False,
-                )
-            if tool_name == "read_skill_reference_chunk":
-                skill_name = str((args or {}).get("skill_name", "")).strip()
-                ref_name = str((args or {}).get("ref_name", "")).strip()
-                offset = int((args or {}).get("offset", 0))
-                limit = int((args or {}).get("limit", 4096))
-                if not skill_name:
-                    return "TOOL_ERROR: missing skill_name"
-                if not ref_name:
-                    return "TOOL_ERROR: missing ref_name"
-                content, resolved, real_offset, real_limit = self.sandbox.read_skill_reference_chunk(skill_name, ref_name, offset, limit)
-                return json.dumps(
-                    {
-                        "ok": True,
-                        "skill_name": skill_name,
-                        "ref_name": ref_name,
-                        "resolved_path": resolved,
-                        "offset": real_offset,
-                        "limit": real_limit,
-                        "content": content,
-                    },
-                    ensure_ascii=False,
-                )
             return f"TOOL_ERROR: unsupported tool: {tool_name}"
         except Exception as e:
             return f"TOOL_ERROR: {type(e).__name__}: {e}"

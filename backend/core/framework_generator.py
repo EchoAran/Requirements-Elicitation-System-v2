@@ -5,6 +5,36 @@ from ..llm_handler import LLMHandler
 from ..prompts.framework_generation import framework_generation_prompt
 from .skill_driver import run_stage_llm
 
+def _extract_json_text(s: str) -> str:
+    t = (s or "").strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+        if t.lower().startswith("json\n"):
+            t = t[5:]
+    return t.strip()
+
+def _parse_framework_response(response: str) -> list[dict]:
+    s = _extract_json_text(response)
+    if not s:
+        raise ValueError("LLM未返回内容")
+    try:
+        obj = json.loads(s)
+    except Exception:
+        start = s.find("[")
+        end = s.rfind("]")
+        if start != -1 and end != -1 and end > start:
+            obj = json.loads(s[start:end + 1])
+        else:
+            raise ValueError("LLM未返回合法的框架JSON")
+    if isinstance(obj, list):
+        return obj
+    if isinstance(obj, dict):
+        for key in ("framework", "sections", "data"):
+            val = obj.get(key)
+            if isinstance(val, list):
+                return val
+    raise ValueError("LLM未返回合法的框架JSON")
+
 class FrameworkGenerator:
     @staticmethod
     async def generate_framework(db: Session, llm_handler: LLMHandler, user_id: int, user_input: str, project_id: int):
@@ -44,20 +74,11 @@ class FrameworkGenerator:
                 fallback_query=f"User's input: {user_input}",
             )
 
-            s = response.strip() if response else ""
-            if s.startswith("```"):
-                s = s.strip("`")
-                if s.lower().startswith("json\n"):
-                    s = s[5:]
             try:
-                framework = json.loads(s)
+                framework = _parse_framework_response(response or "")
             except Exception:
-                start = s.find("[")
-                end = s.rfind("]")
-                if start != -1 and end != -1 and end > start:
-                    framework = json.loads(s[start:end+1])
-                else:
-                    raise ValueError("LLM未返回合法的框架JSON")
+                retry_resp = await llm_handler.call_llm(prompt=fallback_prompt, query=f"User's input: {user_input}")
+                framework = _parse_framework_response(retry_resp or "")
 
             # Write into the database
             for section_data in framework:
@@ -122,20 +143,11 @@ class FrameworkGenerator:
                 fallback_prompt=fallback_prompt,
                 fallback_query=f"User's input: {user_input}",
             )
-            s = response.strip() if response else ""
-            if s.startswith("```"):
-                s = s.strip("`")
-                if s.lower().startswith("json\n"):
-                    s = s[5:]
             try:
-                framework = json.loads(s)
+                framework = _parse_framework_response(response or "")
             except Exception:
-                start = s.find("[")
-                end = s.rfind("]")
-                if start != -1 and end != -1 and end > start:
-                    framework = json.loads(s[start:end+1])
-                else:
-                    raise ValueError("LLM未返回合法的框架JSON")
+                retry_resp = await llm_handler.call_llm(prompt=fallback_prompt, query=f"User's input: {user_input}")
+                framework = _parse_framework_response(retry_resp or "")
             for section_data in framework:
                 section_number = section_data["section_number"]
                 section_content = section_data["section_content"]
