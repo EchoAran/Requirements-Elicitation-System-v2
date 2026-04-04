@@ -40,6 +40,11 @@
 | web-query-planner-skill | 生成联网检索词 | `project_name`, `initial_requirements` | JSON 数组：`["检索词1", ...]` |
 | web-content-cleaner-skill | 判定网页可用性并提炼有效信息 | `project_name`, `initial_requirements`, `url`, `page_text` | JSON 对象：`accept`, `title`, `key_insights`, `content`, `tags` |
 
+## 输出格式参考
+
+- 各技能的输出格式规范请参考：`backend/skills-output-format`
+- 建议在接入时按对应技能文档中的字段与结构做解析与校验
+
 ## 组合建议（可选）
 
 - 需求入门：`interview-info-eval` → `framework-generation` → `initial-prefill`
