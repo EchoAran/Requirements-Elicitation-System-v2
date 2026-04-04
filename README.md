@@ -57,7 +57,8 @@
 │  ├─ core/                      # 访谈核心逻辑、skills runtime、策略模块
 │  ├─ prompts/                   # Prompt 模板
 │  ├─ routes/                    # API 路由
-│  ├─ skills/                    # 技能目录（SKILL.md + references/）
+│  ├─ skills/                    # 技能目录（SKILL.md）
+│  ├─ skills-output-format/      # 各阶段输出格式约束
 │  ├─ config.py                  # 统一配置（环境变量覆盖）
 │  ├─ llm_handler.py             # LLM/Embedding 调用封装
 │  └─ main.py                    # FastAPI 入口
@@ -110,15 +111,8 @@ npm run client:dev
 
 - 执行引擎：`local`（默认，低时延）或 `temporal`（可选）。
 - 前置信息：扫描 `backend/skills/*/SKILL.md` 并解析 frontmatter（YAML）。
-- 元数据扩展：`SkillMeta` 包含 `references` 与 `entry_summary`。
-- 工具接口：改为 skill-aware，而非裸路径：
-  - `read_skill_entry`
-  - `list_skill_references`
-  - `read_skill_reference`
-  - `read_skill_reference_chunk`
-- 兼容性：
-  - reference 目录兼容 `references/` 与 `reference/`
-  - reference 文件名大小写不敏感匹配（如 `workflow.md` 可匹配 `WORKFLOW.md`）
+- 输出格式：按阶段从 `backend/skills-output-format/*.md` 注入到 stage instruction。
+- 工具接口：仅保留 `read_skill_entry`，不再走 reference/workflow 工具读取链路。
 
 ### Temporal 模式（可选）
 
@@ -243,11 +237,10 @@ python -m backend.core.skill_runtime_worker
 - 检查前端是否运行在 `5500`
 - 检查 Vite 代理配置与后端 CORS 配置
 
-### 2) skills 运行时提示读取不到 workflow/output
+### 2) skills 输出格式不生效
 
-- 检查技能目录是否存在 `references/`（或 `reference/`）
-- 检查 `SKILL.md` 中引用文件名是否在该目录存在
-- 当前实现已支持大小写不敏感匹配，但仍建议统一命名
+- 检查 `backend/skills-output-format/` 下是否存在对应阶段文件（如 `interview-info-eval-skill.md`）
+- 检查 `backend/core/skill_driver.py` 中 `STAGE_SPECS` 的 `output_format_path` 配置是否正确
 
 ### 3) Temporal 模式无响应
 
