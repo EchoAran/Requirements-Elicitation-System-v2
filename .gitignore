@@ -6,3 +6,12 @@
 /Web_Search_Sample_v2.py
 /__pycache__
 /改进方案.md
+/database/database.db
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
