@@ -1,0 +1,4 @@
+[submodule "backend/skills"]
+	path = backend/skills
+	url = https://github.com/EchoAran/Requirements-Elicitation-System-v2.git
+	branch = skills-main
