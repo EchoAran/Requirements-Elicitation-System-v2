@@ -8,10 +8,10 @@ description: 从对话中填充结构化槽位。
 从对话中抽取与目标主题相关的信息，并更新目标主题槽位。
 
 输入来自 payload，常见字段：
-- current_topic；
-- current_topic_conversation_record；
-- current_topic_info_slots；
-- entire_interview_info_slots。
+- current_topic 当前正在访谈的主题；
+- current_topic_conversation_record 当前主题的轮次对话记录；
+- current_topic_info_slots 当前主题的槽位信息；
+- entire_interview_info_slots 整个访谈的槽位信息（包含所有主题的）。
 
 工作流程：
 1. 以“最新一轮受访者信息”为主，结合上下文确认是否属于 current_topic；

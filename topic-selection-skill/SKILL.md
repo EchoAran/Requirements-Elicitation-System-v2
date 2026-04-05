@@ -8,9 +8,9 @@ description: 从现有主题中选择下一主题。
 从现有主题中选择最适合作为“下一轮访谈”的主题。
 
 输入来自 payload，常见字段：
-- current_topic；
-- current_topic_conversation_record；
-- topics_list。
+- current_topic 当前正在访谈的主题；
+- current_topic_conversation_record 当前主题的轮次对话记录；
+- topics_list 本项目所有可选主题（每个主题含 topic_number/topic_content）。
 
 选择逻辑：
 1. 先读最后一轮受访者表达，识别其当前关注点；

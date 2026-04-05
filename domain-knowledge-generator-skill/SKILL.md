@@ -8,8 +8,8 @@ description: 生成结构化领域知识卡片。
 基于项目名称与项目需求，生成一条“可用于访谈框架设计”的领域知识卡片。
 
 输入来自 payload，常见字段：
-- project_name
-- initial_requirements
+- project_name 项目名称；
+- initial_requirements 项目初始需求；
 
 生成目标：
 - 给出该项目场景下最有价值的一条领域经验；

@@ -8,13 +8,13 @@ description: 生成采访者下一轮提问。
 生成采访者下一轮发言，用于持续推进当前主题的信息采集。
 
 输入来自 payload，常见字段：
-- current_topic；
-- current_topic_conversation_record；
-- current_topic_info_slots；
-- topics_list；
-- entire_interview_info_slots；
-- scheduling_log（可能为空）；
-- strategy（阶段策略文本）。
+- current_topic 当前正在访谈的主题；
+- current_topic_conversation_record 当前主题的轮次对话记录；
+- current_topic_info_slots 当前主题的槽位信息；
+- topics_list 本项目所有可选主题（每个主题含 topic_number/topic_content）；
+- entire_interview_info_slots 整个访谈的槽位信息（包含所有主题的）；
+- scheduling_log 记录当前轮是否发生切题/新题/收束等（可能为空）；
+- strategy 当前轮的阶段策略；
 
 生成目标：
 - 只围绕当前主题推进；

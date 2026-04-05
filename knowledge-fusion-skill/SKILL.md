@@ -8,9 +8,9 @@ description: 融合多来源知识并输出最终文本。
 将多来源知识项融合为一段高可用的领域背景文本，用于后续访谈框架生成。
 
 输入来自 payload，常见字段：
-- project_name
-- initial_requirements
-- knowledge_items（来源可能包括库内检索、联网检索、模型生成、文件解析）。
+- project_name 项目名称；
+- initial_requirements 项目初始需求；
+- knowledge_items 知识项列表，（来源可能包括库内检索、联网检索、模型生成、文件解析）。
 
 融合步骤：
 1. 先按相关度与可信度排序，优先处理与项目需求强相关的条目；

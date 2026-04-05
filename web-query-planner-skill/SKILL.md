@@ -9,7 +9,7 @@ description: 生成联网检索词并输出JSON数组。
 
 输入来自 payload，常见字段：
 - project_name；
-- initial_requirements。
+- initial_requirements 初始需求。
 
 规划策略：
 1. 从需求中先抽取核心实体：行业、业务对象、关键流程、约束条件、验收诉求；

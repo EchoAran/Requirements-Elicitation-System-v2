@@ -8,10 +8,10 @@ description: 生成新访谈主题及槽位。
 当受访者提出了“现有主题无法覆盖的新方向”时，生成一个新主题及其槽位。
 
 输入来自 payload，常见字段：
-- current_topic；
-- current_topic_conversation_record；
-- topics_list；
-- section_content。
+- current_topic 当前正在访谈的主题；
+- current_topic_conversation_record 当前主题的轮次对话记录；
+- topics_list 本项目所有可选主题（每个主题含 topic_number/topic_content）；
+- section_content 当前访谈章节内容。
 
 生成规则：
 1. 先确认新意图是否确实无法映射到 topics_list 现有主题；

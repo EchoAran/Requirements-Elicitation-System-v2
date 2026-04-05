@@ -168,6 +168,7 @@ git sparse-checkout set <skill_name>
 - 将 `<skill_name>` 替换为真实技能目录名，例如 `domain-optimization-skill`
 - 此仓库内技能目录是一级目录，因此不要写成 `backend/skills/<skill_name>`
 - 该方式会最小化拉取数据，只检出你指定的 skill 目录
+- 拉取后如需切换 skill，重复执行 git sparse-checkout set <another_skill_name> 即可
 
 示例：
 

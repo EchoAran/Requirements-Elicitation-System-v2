@@ -8,9 +8,9 @@ description: 选择访谈下一步操作。
 根据当前对话状态选择下一步访谈操作，并给出各候选操作的置信分布。
 
 输入来自 payload，常见字段：
-- current_topic；
-- current_topic_conversation_record；
-- topics_list。
+- current_topic 当前正在访谈的主题；
+- current_topic_conversation_record 当前主题的轮次对话记录；
+- topics_list 本项目所有可选主题（每个主题含 topic_number/topic_content）。
 
 可选操作：
 - maintain_current_topic

@@ -9,9 +9,9 @@ description: 清洗网页内容并输出结构化可用性判断。
 
 输入来自 payload，常见字段：
 - project_name；
-- initial_requirements；
-- url；
-- page_text。
+- initial_requirements 初始需求；
+- url web页面URL；
+- page_text web页面文本。
 
 执行步骤：
 1. 先做可用性筛选：判断页面是否可读、是否与项目需求相关；
