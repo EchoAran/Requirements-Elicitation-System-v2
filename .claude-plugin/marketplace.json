@@ -1,0 +1,29 @@
+{
+  "name": "requirements-elicitation-skills",
+  "owner": {
+    "name": "EchoAran"
+  },
+  "metadata": {
+    "description": "Plugin marketplace for semi-structured interview skills.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "semi-structured-interview-skills",
+      "source": ".",
+      "description": "Interview planning, topic orchestration, slot filling, and domain knowledge skills.",
+      "version": "1.0.0",
+      "author": {
+        "name": "EchoAran"
+      },
+      "repository": "https://github.com/EchoAran/Requirements-Elicitation-System-v2.git",
+      "tags": [
+        "skills",
+        "requirements",
+        "interview",
+        "knowledge"
+      ],
+      "category": "ai-workflows"
+    }
+  ]
+}

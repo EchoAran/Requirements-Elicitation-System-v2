@@ -1,0 +1,34 @@
+{
+  "name": "semi-structured-interview-skills",
+  "version": "1.0.0",
+  "description": "Skill bundle for requirements elicitation and semi-structured interview execution.",
+  "author": {
+    "name": "EchoAran"
+  },
+  "repository": "https://github.com/EchoAran/Requirements-Elicitation-System-v2.git",
+  "skills": [
+    "./affected-topic-detection-skill",
+    "./domain-fusion-skill",
+    "./domain-ingest-skill",
+    "./domain-knowledge-generator-skill",
+    "./domain-optimization-skill",
+    "./framework-generation-skill",
+    "./initial-prefill-skill",
+    "./interview-info-eval-skill",
+    "./knowledge-fusion-skill",
+    "./operation-selector-skill",
+    "./remarks-generation-skill",
+    "./slot-filling-skill",
+    "./topic-dependency-skill",
+    "./topic-generation-skill",
+    "./topic-selection-skill",
+    "./web-content-cleaner-skill",
+    "./web-query-planner-skill"
+  ],
+  "keywords": [
+    "requirements-elicitation",
+    "semi-structured-interview",
+    "skills-runtime"
+  ],
+  "license": "MIT"
+}
