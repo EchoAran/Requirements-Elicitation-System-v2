@@ -245,12 +245,6 @@ export async function retrievalSuggest(project_id: number, embed: { api_url: str
   return apiPost(`/api/projects/${project_id}/retrieval/suggest`, { ...embed, user_id: uid })
 }
 
-export async function retrievalFuse(project_id: number, items: { domain_id: number; weight: number }[], config?: LLMConfig) {
-  const uid = getUserIdFromStorage()
-  const payload = config ? { items, api_url: config.api_url, api_key: config.api_key, model_name: config.model_name, user_id: uid } : { items, user_id: uid }
-  return apiPost(`/api/projects/${project_id}/retrieval/fuse`, payload)
-}
-
 export async function initializeFrameworkWithFused(project_id: number, config: LLMConfig, fused_text: string) {
   const uid = getUserIdFromStorage()
   const body: Record<string, unknown> = { ...config, fused_text }
@@ -266,12 +260,6 @@ export async function retrievalSuggestFromText(text: string, embed: { api_url: s
   const uid = typeof user_id === 'number' ? user_id : getUserIdFromStorage()
   if (typeof uid === 'number') body.user_id = uid
   return apiPost(`/api/retrieval/suggest-text`, body)
-}
-
-export async function retrievalFuseGlobal(items: { domain_id: number; weight: number }[], config?: LLMConfig) {
-  const uid = getUserIdFromStorage()
-  const payload = config ? { items, api_url: config.api_url, api_key: config.api_key, model_name: config.model_name, user_id: uid } : { items, user_id: uid }
-  return apiPost(`/api/retrieval/fuse`, payload)
 }
 
 export type KnowledgeMode = 'basic' | 'pro' | 'max'

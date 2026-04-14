@@ -47,11 +47,6 @@ STAGE_SPECS: dict[str, StageSpec] = {
         instruction="现在需要融合多来源知识。请调用对应技能并输出最终融合文本。",
         output_format_path="knowledge-fusion-skill.md",
     ),
-    "retrieval.domain_fusion": StageSpec(
-        skills=["domain-fusion-skill"],
-        instruction="现在需要按照权重融合领域经验列表。请调用对应技能并输出融合后的文本。",
-        output_format_path="domain-fusion-skill.md",
-    ),
     "framework.generate": StageSpec(
         skills=["framework-generation-skill"],
         instruction="现在需要根据输入生成访谈框架。请调用对应技能并严格输出框架JSON数组。",

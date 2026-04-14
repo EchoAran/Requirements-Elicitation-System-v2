@@ -203,8 +203,6 @@ python -m backend.core.skill_runtime_worker
 - `POST /api/knowledge/files/parse`
 - `POST /api/knowledge/acquire`
 - `POST /api/knowledge/summarize`
-- `POST /api/projects/{project_id}/retrieval/fuse`
-- `POST /api/retrieval/fuse`
 - `POST /api/projects/{project_id}/initialize-with-fused`
 - `POST /api/projects/{project_id}/topics/priority`
 

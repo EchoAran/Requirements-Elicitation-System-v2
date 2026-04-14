@@ -17,7 +17,6 @@ from database.models import DomainExperience, Project, Section, Topic, Slot, Use
 from ..llm_handler import LLMHandler
 from ..config import CONFIG
 from ..core.priority_builder import PriorityBuilder
-from ..prompts.domain_fusion import domain_fusion_prompt
 from ..core.framework_generator import FrameworkGenerator
 from ..prompts.knowledge_multi_path import (
     web_search_query_prompt,
@@ -47,13 +46,6 @@ class RetrievalSuggestFromTextRequest(SafeModel):
     text: str
     threshold: float = CONFIG.RETRIEVAL_COSINE_THRESHOLD
     top_k: int = CONFIG.RETRIEVAL_TOP_K
-    user_id: int | None = None
-
-class FuseRequest(SafeModel):
-    items: List[dict]
-    api_url: str | None = None
-    api_key: str | None = None
-    model_name: str | None = None
     user_id: int | None = None
 
 class FusedInitializeRequest(SafeModel):
@@ -716,92 +708,6 @@ async def knowledge_summarize(payload: KnowledgeSummarizeRequest, db: Session = 
         db.refresh(d)
         saved_domain_id = d.domain_id
     return {"success": True, "fused_text": fused_text, "saved_domain_id": saved_domain_id}
-
-@router.post("/api/projects/{project_id}/retrieval/fuse")
-async def retrieval_fuse(project_id: int, payload: FuseRequest, db: Session = Depends(get_db)):
-    _get_project_for_user(db, project_id, payload.user_id)
-    ids = [int(i.get("domain_id")) for i in payload.items if i.get("domain_id") is not None]
-    if not ids:
-        return {"success": True, "fused_text": ""}
-    dq = db.query(DomainExperience).filter(DomainExperience.domain_id.in_(ids))
-    if payload.user_id is not None:
-        dq = dq.filter(DomainExperience.user_id == payload.user_id)
-    ds = dq.all()
-    id_to_w = {int(i.get("domain_id")): float(i.get("weight", 0.0)) for i in payload.items}
-    ds = [d for d in ds if (id_to_w.get(d.domain_id, 0.0) > 0.0)]
-    if not ds:
-        return {"success": True, "fused_text": ""}
-    if payload.api_url and payload.api_key and payload.model_name:
-        llm = LLMHandler(api_url=payload.api_url, api_key=payload.api_key, model_name=payload.model_name)
-        items_for_llm = []
-        for d in ds:
-            items_for_llm.append({
-                "domain_id": d.domain_id,
-                "domain_name": d.domain_name,
-                "weight": id_to_w.get(d.domain_id, 0.0),
-                "content": d.domain_experience_content or "",
-            })
-        try:
-            fused_text = await run_stage_llm(
-                llm=llm,
-                stage_key="retrieval.domain_fusion",
-                payload={"items": items_for_llm},
-                fallback_prompt=domain_fusion_prompt,
-                fallback_query=json.dumps(items_for_llm, ensure_ascii=False),
-            )
-            fused_text = (fused_text or "").strip()
-        except Exception:
-            ds_sorted = sorted(ds, key=lambda d: id_to_w.get(d.domain_id, 0.0), reverse=True)
-            parts = [(d.domain_experience_content or "") for d in ds_sorted]
-            fused_text = "\n\n".join(parts)
-        return {"success": True, "fused_text": fused_text}
-    else:
-        ds_sorted = sorted(ds, key=lambda d: id_to_w.get(d.domain_id, 0.0), reverse=True)
-        parts = [(d.domain_experience_content or "") for d in ds_sorted]
-        fused = "\n\n".join([p for p in parts if p.strip()])
-        print(f"融合领域经验\n{fused}")
-        return {"success": True, "fused_text": fused}
-
-@router.post("/api/retrieval/fuse")
-async def retrieval_fuse_global(payload: FuseRequest, db: Session = Depends(get_db)):
-    _require_user_id(payload.user_id)
-    ids = [int(i.get("domain_id")) for i in payload.items if i.get("domain_id") is not None]
-    if not ids:
-        return {"success": True, "fused_text": ""}
-    ds = db.query(DomainExperience).filter(DomainExperience.domain_id.in_(ids), DomainExperience.user_id == payload.user_id).all()
-    id_to_w = {int(i.get("domain_id")): float(i.get("weight", 0.0)) for i in payload.items}
-    ds = [d for d in ds if (id_to_w.get(d.domain_id, 0.0) > 0.0)]
-    if not ds:
-        return {"success": True, "fused_text": ""}
-    if payload.api_url and payload.api_key and payload.model_name:
-        llm = LLMHandler(api_url=payload.api_url, api_key=payload.api_key, model_name=payload.model_name)
-        items_for_llm = []
-        for d in ds:
-            items_for_llm.append({
-                "domain_id": d.domain_id,
-                "domain_name": d.domain_name,
-                "weight": id_to_w.get(d.domain_id, 0.0),
-                "content": d.domain_experience_content or "",
-            })
-        try:
-            fused_text = await run_stage_llm(
-                llm=llm,
-                stage_key="retrieval.domain_fusion",
-                payload={"items": items_for_llm},
-                fallback_prompt=domain_fusion_prompt,
-                fallback_query=json.dumps(items_for_llm, ensure_ascii=False),
-            )
-            fused_text = (fused_text or "").strip()
-        except Exception:
-            ds_sorted = sorted(ds, key=lambda d: id_to_w.get(d.domain_id, 0.0), reverse=True)
-            parts = [(d.domain_experience_content or "") for d in ds_sorted]
-            fused_text = "\n\n".join(parts)
-        return {"success": True, "fused_text": fused_text}
-    else:
-        ds_sorted = sorted(ds, key=lambda d: id_to_w.get(d.domain_id, 0.0), reverse=True)
-        parts = [(d.domain_experience_content or "") for d in ds_sorted]
-        fused = "\n\n".join([p for p in parts if p.strip()])
-        return {"success": True, "fused_text": fused}
 
 @router.post("/api/projects/{project_id}/initialize-with-fused")
 async def initialize_with_fused(project_id: int, payload: FusedInitializeRequest, db: Session = Depends(get_db)):
