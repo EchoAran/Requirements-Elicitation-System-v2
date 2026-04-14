@@ -47,11 +47,10 @@
 
 ### 模块D：知识融合与沉淀
 - knowledge-fusion-skill
-- domain-fusion-skill
 - domain-ingest-skill
 - domain-optimization-skill
 
-用于把多源知识整合为可复用的领域经验，并持续迭代。
+用于把多源知识整合并沉淀为可复用的领域经验，持续迭代优化。
 
 ## Skills 清单（作用 / 语义输入 / 语义输出）
 
@@ -71,7 +70,6 @@
 | web-content-cleaner-skill | 网页可用性判定与清洗 | 项目需求 + 网页正文内容 | 可用性判断 + 清洗后的有效知识片段 |
 | domain-knowledge-generator-skill | 直接生成知识卡片 | 项目场景与需求描述 | 结构化领域知识卡片 |
 | knowledge-fusion-skill | 融合多来源知识 | 多源知识条目 + 项目上下文 | 统一的知识正文 |
-| domain-fusion-skill | 融合多条领域经验 | 多条领域经验及其相对权重 | 融合后的领域经验文本 |
 | domain-ingest-skill | 材料提炼入库经验 | 领域说明 + 文档材料集合 | 一条可复用领域经验 |
 | domain-optimization-skill | 经验迭代优化 | 原领域经验 + 项目落地结构与槽值证据 | 优化后的领域经验版本 |
 
@@ -94,9 +92,8 @@
 
 ### 3) 知识增强主链（硬依赖）
 - `web-query-planner` → `web-content-cleaner` → `knowledge-fusion`
-- 或：`domain-fusion`（当已有多条内部领域经验时）
 
-用途：将外部/内部知识融合为可用于访谈建模的背景信息。
+用途：将外部与系统生成知识融合为可用于访谈建模的背景信息。
 
 ### 4) 知识沉淀主链（项目后处理）
 - `domain-ingest`（从项目材料沉淀新经验）
@@ -108,7 +105,7 @@
 - 最小访谈包：`framework-generation` + `initial-prefill` + `remarks-generation`
 - 自治访谈包：初始化主链 + 访谈运行主链
 - 知识增强包：知识增强主链 + `framework-generation`
-- 沉淀优化包：知识沉淀主链 + `domain-fusion`
+- 沉淀优化包：知识沉淀主链
 
 ## 实践建议
 
